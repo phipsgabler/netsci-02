@@ -1,0 +1,101 @@
+% works on TeX-Live 2015
+
+\documentclass{beamer}
+\usepackage{tgheros}
+\usepackage[varqu, scaled]{inconsolata}
+%\usepackage{mylistings}
+\usepackage{csquotes}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{graphicx}
+\usepackage{siunitx}
+\usepackage{booktabs}
+%\usepackage{tikz}
+%\usepackage{tikz-uml}
+
+% \lstset{
+%   style=colored,
+%   %belowskip=0pt
+%   basicstyle=\ttfamily\small\color{darkgray},
+%   columns=[c]fixed,
+%   gobble=4
+% }
+
+% colors
+\providecolor{textgreen}{RGB}{59, 158, 72}
+\providecolor{textblue}{RGB}{15, 100, 255}
+\providecolor{textred}{RGB}{255, 51, 66}
+
+\usetheme[compress]{Singapore}
+\useinnertheme{circles}
+\setbeamercolor{structure}{fg=textblue}
+%\setbeamercolor{block body alerted}{bg=normal text.bg!90!black}
+\setbeamercolor{block body}{bg=normal text.bg!90!black}
+%\setbeamercolor{block body example}{bg=normal text.bg!90!black}
+%\setbeamercolor{block title alerted}{use={normal text,alerted text},fg=alerted text.fg!75!normal text.fg,bg=normal text.bg!75!black}
+\setbeamercolor{block title}{fg=black, bg=textblue!90}
+%\setbeamercolor{block title example}{use={normal text,example text},fg=example text.fg!75!normal text.fg,bg=normal text.bg!75!black}
+
+% smaller footnotes; see: http://tex.stackexchange.com/a/192652/46356
+\setbeamertemplate{footnote}{%
+  \tiny%
+  \parindent 1em\noindent%
+  \raggedright
+  \hbox to 1.8em{\hfil\insertfootnotemark}\insertfootnotetext\par%
+}%
+\setlength\footnotesep{0pt}
+
+\author{Philipp Gabler}
+\title{Geometry}
+\date{2016-02-03}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{document}
+\beamertemplatenavigationsymbolsempty
+
+\section{Motivation}
+\begin{frame}
+
+\end{frame}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Methodology}
+\begin{frame}
+
+\end{frame}
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Experimental Setup}
+\begin{frame}
+  
+\end{frame}
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Results}
+\begin{frame}
+  
+\end{frame}
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Discussion}
+\begin{frame}
+  
+\end{frame}
+
+
+% @misc{snapnets,
+%   author       = {Jure Leskovec and Andrej Krevl},
+%   title        = {{SNAP Datasets}: {Stanford} Large Network Dataset Collection},
+%   howpublished = {\url{http://snap.stanford.edu/data}},
+%   month        = jun,
+%   year         = 2014
+% }
+
+\end{document}
