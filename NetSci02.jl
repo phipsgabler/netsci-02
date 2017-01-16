@@ -7,11 +7,20 @@ export readnetwork
 
 const line_regex = r"^(\d+)\s(\d+)"
 
-"Read a space separated file into an (undirected) Graph in an efficient way."
+
+"""
+    readnetwork(filename::String, limit::Number = Inf; fromzero::Bool = false)
+
+Read a space separated file into an (undirected) Graph in an efficient way.
+
+# Arguments
+* `limit::Number`: Maximum number of lines to read (good for large files)
+* `fromzero::Bool`: Whether vertices are counted from zero; if so, correct accordingly
+"""
 function readnetwork(filename::String, limit::Number = Inf; fromzero::Bool = false)
     graph = Graph()
     vertices = 0
-    correction = Int(fromzero)
+    const correction = Int(fromzero)
 
     # using grep to exclude comment lines
     open(filename) do file
@@ -24,10 +33,11 @@ function readnetwork(filename::String, limit::Number = Inf; fromzero::Bool = fal
                 raw_v1, raw_v2 = m.captures
                 v1 = parse(Int, raw_v1) + correction
                 v2 = parse(Int, raw_v2) + correction
-            
-                if v1 > vertices || v2 > vertices
-                    @assert add_vertices!(graph, max(v1, v2) - vertices)
-                    vertices = max(v1, v2)
+
+                new_vertices = max(v1, v2)
+                if new_vertices > vertices
+                    @assert add_vertices!(graph, new_vertices - vertices)
+                    vertices = new_vertices
                 end
                 
                 # we explicitely ignore inverse directions, if there are any
@@ -42,5 +52,32 @@ end
 
 
 
+function samplepercolations(measure::Function, graph::Graph, repetitions::Integer,
+                            result_type = typeof(measure(Graph(1, 0))))
+    results = Array(result_type, repetitions, nv(graph))
+    samplepercolations!(results, graph, repetitions, measure)
+    return results
+end
+
+function samplepercolations!{T}(results::AbstractArray{T, 2}, graph::Graph, repetitions::Integer,
+                                measure::Function)
+    const vertices = nv(graph)
+    for r = 1:repetitions
+        victim = copy(graph)
+        for v = vertices:-1:1
+            results[r, v] = measure(victim)
+            rem_vertex!(victim, rand(1:v))
+        end
+    end
+end
+
+
+
+function test(;nv = 100, ne = 50)
+    graph = Graph(nv, ne)
+    samplepercolations(graph, 10) do g
+        length(connected_components(g)), length(triangles(g))
+    end
+end
 
 end
