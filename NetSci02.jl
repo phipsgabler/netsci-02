@@ -1,4 +1,4 @@
-module NetSci01
+module NetSci02
 
 using LightGraphs, GraphPlot
 using Distributions
