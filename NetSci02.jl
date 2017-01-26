@@ -5,63 +5,113 @@ using Distributions
 
 include("utils.jl")
 
-export readnetwork
 
+"""
+    annealing(loss::Function, initial_parameter, temp_decay, stepsize, stop)
 
-function optimize(loss::Function, initial_parameter, temp_decay, stepsize, stop)
+Find a parameter setting minimizing `loss`, using simulated annealing.
+"""
+function annealing(loss::Function, initial_parameter, initial_temperature, temp_decay,
+                   stepsize, stop)
     const k = length(initial_parameter)
 
-    step = 1
+    steps = 1
+    T = initial_temperature
     x_old = initial_parameter
     f_old = loss(initial_parameter)
-    T = 1.0
 
-    while !stop(step, f_old)
-        direction = normalize(randn(k))
+    while !stop(steps, f_old)
+        direction = normalize(randn(k)) # uniform on hypersphere
         x_new = x_old + direction * stepsize
         f_new = loss(x_new)
-        scaled_diff = (f_old - f_new) / T
 
-        if rand() <= min(1, exp(scaled_diff))
+        if rand() <= min(1, exp(-(f_new - f_old) / T))
             x_old = x_new
             f_old = f_new
         end
 
         T = max(temp_decay * T, eps())
-        step += 1
+        steps += 1
+
+        if steps % 10 == 0
+            println("$steps steps, T = $T ")
+            println("\t", x_new)
+            println("\t", f_new)
+        end
     end
 
     return x_old
 end
 
 
+"""
+    samplepercolations(measure::Function, graph::Graph, repetitions::Integer,
+                       getdistribution::Function)
 
-function samplepercolations(measure::Function, graph::Graph, repetitions::Integer,
+Sample `repetitions` percolation runs on `graph`, calculating `measure` each time.  The
+probability of deleting a nodes is calculated by `getdistribution` of the current graph.
+"""
+function samplepercolations(measure::Function,
+                            graph::Graph,
+                            repetitions::Integer,
+                            getdistribution::Function,
                             result_type = typeof(measure(Graph(1, 0))))
-    results = Array(result_type, repetitions, nv(graph))
-    samplepercolations!(results, graph, repetitions, measure)
-    return results
-end
-
-function samplepercolations!{T}(results::AbstractArray{T, 2}, graph::Graph, repetitions::Integer,
-                                measure::Function)
     const vertices = nv(graph)
-    for r = 1:repetitions
+    results = SharedArray(result_type, repetitions, nv(graph))
+    pmap(1:repetitions) do r
         victim = copy(graph)
         for v = vertices:-1:1
             results[r, v] = measure(victim)
-            rem_vertex!(victim, rand(1:v))
+            rem_vertex!(victim, rand(getdistribution(victim)))
         end
     end
+    return results
 end
 
+
+"""
+    informed_probabilities(graph::Graph, weights::Vector{Float64})
+
+Construct a distribution over nodes which integrates knowledge about local clustering,
+degree, and second-order neighbourhood, taking into account `weights`.
+"""
+function informed_probabilities(graph::Graph, weights::Vector{Float64})::DiscreteUnivariateDistribution
+    const maxdegrees = nv(graph) * (nv(graph) + 1) / 2
+    infos = Array(Float64, nv(graph), 3)
+    infos[:, 1] = local_clustering_coefficient(graph)
+    infos[:, 2] = degree(graph) / maxdegrees
+    infos[:, 3] = map(v -> length(neighborhood(graph, v, 2)), vertices(graph)) / maxdegrees
+
+    Categorical(softmax(infos * weights))
+end
+
+
+"""
+    percolation_loss(graph, samples)
+
+Construct a loss function which samples the expected area of the percolation curve of `graph`,
+using the parameter as weightings.
+"""
+function percolation_loss(graph::Graph, samples::Integer)
+    function loss(parameter)
+        dist(g) = informed_probabilities(g, parameter)
+        curves = samplepercolations(graph, samples, dist) do g
+            maximum(length(c) for c in connected_components(g))
+        end
+        normalizers = mapslices(maximum, curves, 2)
+        # every curve is normed relative to its maximum (highest) value; then, average
+        sum(curves ./ normalizers) / samples
+    end
+end
 
 
 function test(;nv = 100, ne = 50)
     graph = Graph(nv, ne)
-    samplepercolations(graph, 10) do g
-        length(connected_components(g)), length(triangles(g))
-    end
+    # samplepercolations(graph, 10, _ -> DiscreteUniform(1, nv)) do g
+    #     length(connected_components(g)), length(triangles(g))
+    # end
+
+    annealing(percolation_loss(graph, 10), rand(3), 10, 0.99, 0.01, (s, v) -> s > 1000)
 end
 
 end

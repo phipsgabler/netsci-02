@@ -43,3 +43,6 @@ function readnetwork(filename::String, limit::Number = Inf; fromzero::Bool = fal
 end
 
 
+logistic(x) = 1 / (1 + exp(-x))
+
+softmax(xs) = let e = exp(xs); e / sum(e) end
