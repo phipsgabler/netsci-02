@@ -3,52 +3,36 @@ module NetSci02
 using LightGraphs, GraphPlot
 using Distributions
 
+include("utils.jl")
+
 export readnetwork
 
-const line_regex = r"^(\d+)\s(\d+)"
 
+function optimize(loss::Function, initial_parameter, temp_decay, stepsize, stop)
+    const k = length(initial_parameter)
 
-"""
-    readnetwork(filename::String, limit::Number = Inf; fromzero::Bool = false)
+    step = 1
+    x_old = initial_parameter
+    f_old = loss(initial_parameter)
+    T = 1.0
 
-Read a space separated file into an (undirected) Graph in an efficient way.
+    while !stop(step, f_old)
+        direction = normalize(randn(k))
+        x_new = x_old + direction * stepsize
+        f_new = loss(x_new)
+        scaled_diff = (f_old - f_new) / T
 
-# Arguments
-* `limit::Number`: Maximum number of lines to read (good for large files)
-* `fromzero::Bool`: Whether vertices are counted from zero; if so, correct accordingly
-"""
-function readnetwork(filename::String, limit::Number = Inf; fromzero::Bool = false)
-    graph = Graph()
-    vertices = 0
-    const correction = Int(fromzero)
-
-    # using grep to exclude comment lines
-    open(filename) do file
-        for (l, line) in enumerate(eachline(file))
-            if l > limit
-                break
-            end
-
-            if (m = match(line_regex, line)) !== nothing
-                raw_v1, raw_v2 = m.captures
-                v1 = parse(Int, raw_v1) + correction
-                v2 = parse(Int, raw_v2) + correction
-
-                new_vertices = max(v1, v2)
-                if new_vertices > vertices
-                    @assert add_vertices!(graph, new_vertices - vertices)
-                    vertices = new_vertices
-                end
-                
-                # we explicitely ignore inverse directions, if there are any
-                @assert has_edge(graph, v1, v2) || add_edge!(graph, v1, v2)
-            end
+        if rand() <= min(1, exp(scaled_diff))
+            x_old = x_new
+            f_old = f_new
         end
+
+        T = max(temp_decay * T, eps())
+        step += 1
     end
 
-    return graph
+    return x_old
 end
-
 
 
 
