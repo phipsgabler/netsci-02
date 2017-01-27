@@ -44,5 +44,41 @@ end
 
 
 logistic(x) = 1 / (1 + exp(-x))
-
 softmax(xs) = let e = exp(xs); e / sum(e) end
+
+
+"""
+    annealing(loss::Function, initial_parameter, initial_temperature, temp_decay, stepsize, stop)
+
+Find a parameter setting minimizing `loss`, using simulated annealing.
+"""
+function annealing(loss::Function, initial_parameter, initial_temperature,
+                   temp_decay, stepsize, stop;
+                   debug_callback = (;kwargs...) -> return)
+    const k = length(initial_parameter)
+
+    steps = 1
+    T = initial_temperature
+    x_old = initial_parameter
+    f_old = loss(initial_parameter)
+
+    while !stop(steps, f_old)
+        direction = normalize(randn(k)) # uniform on hypersphere
+        x_new = x_old + direction * stepsize
+        f_new = loss(x_new)
+        
+        if (updated = rand() <= min(1, exp(-(f_new - f_old) / T)))
+            x_old = x_new
+            f_old = f_new
+        end
+
+        debug_callback(steps = steps, T = T, updated = updated, direction = direction,
+                       x_old = x_old, f_old = f_old,
+                       f_new = f_new, x_new = x_new)
+        
+        T = max(temp_decay * T, eps())
+        steps += 1
+    end
+
+    return x_old
+end
