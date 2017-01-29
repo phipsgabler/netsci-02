@@ -2,6 +2,7 @@ module NetSci02
 
 using LightGraphs, GraphPlot
 using Distributions
+using Loess
 using PyPlot
 
 include("utils.jl")
@@ -37,8 +38,6 @@ function samplepercolations(measure::Function,
             end
             
             curves[r, i] = measure(victim)
-            # @show r, φ, connected_components(victim)
-            # @show distributions[[1, 10]]
         end
     end
     
@@ -58,7 +57,8 @@ function informed_probabilities(graph::Graph,
                                 infos::Vector{Symbol})::Function
     const maxdegrees = nv(graph) * (nv(graph) + 1) / 2
     const information_functions = Dict(
-        :degree => g -> degree(g) / maxdegrees,
+        :degree => g -> degree(g),
+        :inv_degree => g -> 1 ./ degree(g),
         :local_clustering => g -> local_clustering_coefficient(g),
         :neighbourhood2 => g -> map(v -> length(neighborhood(g, v, 2)), vertices(g)) / maxdegrees,
         :neighbourhood3 => g -> map(v -> length(neighborhood(g, v, 3)), vertices(g)) / maxdegrees
@@ -69,12 +69,37 @@ function informed_probabilities(graph::Graph,
         information[:, i] = information_functions[info](graph)
     end
 
-    probabilities = logistic.(information * weights)
-    return function(φ)
-        scaled_probabilitiess = probabilities .* (φ / mean(probabilities))
-        Bernoulli.(clamp(scaled_probabilitiess, 0.0, 1.0)) # because rounding errors
+    return makedistributions(information * weights)
+end
+
+
+function makedistributions(logits)
+    probabilities = logistic.(logits)
+    return function (φ)
+        scaled_probabilities = probabilities .* (φ / mean(probabilities))
+        Bernoulli.(clamp(scaled_probabilities, 0.0, 1.0)) # because rounding errors
     end
 end
+
+function smoothcurves(curves, stepsize)
+    range = 0.0:stepsize:1.0
+    average_curve = squeeze(mapslices(mean, curves, 1), 1)
+    loess_curve = predict(loess(range, average_curve), range)
+end
+
+normalizecurves(curves) = curves ./ mapslices(maximum, curves, 2)
+
+function percolation_area(curves, stepsize, samples = size(curves)[2], smooth = true)
+    # normalize by maximum value, then integrate and average
+    normalized_curves = normalizecurves(curves)
+    
+    if smooth
+        return sum(smoothcurves(normalized_curves, stepsize)) * stepsize
+    else
+        return sum(normalized_curves) * stepsize / samples
+    end
+end
+
 
 
 """
@@ -90,31 +115,43 @@ function percolation_loss(graph::Graph, infos::Vector{Symbol}, samples = 10, ste
             reduce(max, 0, length.(connected_components(g)))
         end
 
-        # normalize by maximum value, then integrate and average
-        normalized_curves = curves ./ mapslices(maximum, curves, 2)
-        return sum(normalized_curves) * stepsize / samples
+        return percolation_area(curves, stepsize, samples)
     end
 end
 
 
-# normalize_curve(curve) = curve / maximum(curve)
-# percolation_area(curves, stepsize) = sum(curves ./ mapslices(maximum, curves, 2)) * stepsize / size(curves)[2]
+function simulate_random(graph = Graph(1000, 2000))
+    const stepsize = 0.05
+    const range = 0.0:stepsize:1.0
+    
+    dist1 = makedistributions(-2 ./ degree(graph) + 2 * degree(graph))
+    dist2 = φ -> fill(Bernoulli(φ), nv(graph))
 
-# function simulate_random(graph = Graph(1000, 2000))
-#     const stepsize = 0.05
-#     results = samplepercolations(graph, φ -> fill(Bernoulli(φ), nv(graph)), 10, stepsize) do g
-#         reduce(max, 0, length.(connected_components(g)))
-#     end
+    # println(map(φ -> params(dist1(φ)[1]), range))
+    # println(10 ./ degree(graph))
+    
+    results1 = samplepercolations(graph, dist1, 20, stepsize) do g
+        reduce(max, 0, length.(connected_components(g)))
+    end
 
-#     println(percolation_area(results, stepsize))
-#     println(results[1, :])
-#     plot(0.0:stepsize:1.0, transpose(results))
-# end
+    println(percolation_area(results1, stepsize))
+    # println(results1[1, :])
+    plot(0.0:stepsize:1.0, smoothcurves(normalizecurves(results1), stepsize), color = "r")
+
+    results2 = samplepercolations(graph, dist2, 20, stepsize) do g
+        reduce(max, 0, length.(connected_components(g)))
+    end
+
+    println(percolation_area(results2, stepsize))
+    # println(results2[1, :])
+    plot(0.0:stepsize:1.0, smoothcurves(normalizecurves(results2), stepsize), color = "g")
+end
 
 
 function test(graph = Graph(100, 300))
     error_trace = Float64[]
-    
+    infos = [:degree, :inv_degree]
+
     function log_annealing(;kwargs...)
         args = Dict(kwargs)
         push!(error_trace, args[:f_new])
@@ -123,13 +160,20 @@ function test(graph = Graph(100, 300))
             println(args[:steps], " steps, T = ", args[:T])
             println("\tParameters: ", args[:x_new])
             println("\tError: ", args[:f_new])
+
+            if args[:updated]
+                dist = informed_probabilities(graph, args[:x_new], infos)
+                curves = samplepercolations(graph, dist, 1, 0.05) do g
+                    reduce(max, 0, length.(connected_components(g)))
+                end
+                plot(0.0:0.05:1.0, smoothcurves(normalizecurves(curves), 0.05))
+            end
         end
     end
 
-    infos = [:degree]
-    annealing(percolation_loss(graph, infos), randn(length(infos)),
-              10000.0, 0.99, 10, (s, v) -> s > 10000;
-              debug_callback = log_annealing)
+    params = annealing(percolation_loss(graph, infos, 10), randn(length(infos)),
+                       1000.0, 0.99, 0.1, (s, v) -> s > 1000;
+                       debug_callback = log_annealing)
 
     plot(error_trace)
 end
