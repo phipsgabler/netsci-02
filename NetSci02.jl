@@ -90,12 +90,17 @@ end
 normalizecurves(curves) = curves ./ mapslices(maximum, curves, 2)
 
 function percolation_area(curves, stepsize, samples = size(curves)[2], smooth = true)
-    # normalize by maximum value, then integrate and average
     normalized_curves = normalizecurves(curves)
+    stepsize = 1 / length(average_curve)
     
     if smooth
+        # numerical integration over a local regression curve...
+        # average_curve = squeeze(mapslices(mean, curves, 1), 1)
+        # loess_model = loess(0.0:stepsize:1.0, average_curve)
+        # return quadgk(x -> predict(loess, x), 0.0, 1.0)
         return sum(smoothcurves(normalized_curves, stepsize)) * stepsize
     else
+        # just take the average of everything...
         return sum(normalized_curves) * stepsize / samples
     end
 end
