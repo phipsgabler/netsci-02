@@ -42,7 +42,6 @@ function readnetwork(filename::String, limit::Number = Inf; fromzero::Bool = fal
     return graph
 end
 
-
 logistic(x) = 1 / (1 + exp(-x))
 softmax(xs) = let e = exp(xs); e / sum(e) end
 
@@ -82,3 +81,4 @@ function annealing(loss::Function, initial_parameter, initial_temperature,
 
     return x_old
 end
+

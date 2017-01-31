@@ -58,7 +58,7 @@ function informed_probabilities(graph::Graph,
     const maxdegrees = nv(graph) * (nv(graph) + 1) / 2
     const information_functions = Dict(
         :degree => g -> degree(g),
-        :inv_degree => g -> 1 ./ degree(g),
+        :inv_degree => g -> 1 ./ (degree(g) + eps()),
         :local_clustering => g -> local_clustering_coefficient(g),
         :neighbourhood2 => g -> map(v -> length(neighborhood(g, v, 2)), vertices(g)) / maxdegrees,
         :neighbourhood3 => g -> map(v -> length(neighborhood(g, v, 3)), vertices(g)) / maxdegrees
@@ -89,16 +89,16 @@ end
 
 normalizecurves(curves) = curves ./ mapslices(maximum, curves, 2)
 
-function percolation_area(curves, stepsize, samples = size(curves)[2], smooth = true)
+function percolation_area(curves, smooth = true)
     normalized_curves = normalizecurves(curves)
-    stepsize = 1 / length(average_curve)
-    
+    samples = size(curves)[1]
+    stepsize = 1 / (size(curves)[end] - 1)
+
     if smooth
-        # numerical integration over a local regression curve...
-        # average_curve = squeeze(mapslices(mean, curves, 1), 1)
-        # loess_model = loess(0.0:stepsize:1.0, average_curve)
-        # return quadgk(x -> predict(loess, x), 0.0, 1.0)
-        return sum(smoothcurves(normalized_curves, stepsize)) * stepsize
+        # numerical integration over a local regression curve
+        average_curve = squeeze(mapslices(mean, normalized_curves, 1), 1)
+        smoothed_curve = loess(0.0:stepsize:1.0, average_curve)
+        return quadgk(x -> predict(smoothed_curve, x), 0.0, 1.0)[1]
     else
         # just take the average of everything...
         return sum(normalized_curves) * stepsize / samples
@@ -120,12 +120,12 @@ function percolation_loss(graph::Graph, infos::Vector{Symbol}, samples = 10, ste
             reduce(max, 0, length.(connected_components(g)))
         end
 
-        return percolation_area(curves, stepsize, samples)
+        return percolation_area(curves)
     end
 end
 
 
-function simulate_random(graph = Graph(1000, 2000))
+function simulate_random(graph = Graph(1000, 1000))
     const stepsize = 0.05
     const range = 0.0:stepsize:1.0
     
@@ -135,27 +135,27 @@ function simulate_random(graph = Graph(1000, 2000))
     # println(map(φ -> params(dist1(φ)[1]), range))
     # println(10 ./ degree(graph))
     
-    results1 = samplepercolations(graph, dist1, 20, stepsize) do g
+    results1 = samplepercolations(graph, dist1, 10, stepsize) do g
         reduce(max, 0, length.(connected_components(g)))
     end
 
-    println(percolation_area(results1, stepsize))
+    println(percolation_area(results1))
     # println(results1[1, :])
     plot(0.0:stepsize:1.0, smoothcurves(normalizecurves(results1), stepsize), color = "r")
 
-    results2 = samplepercolations(graph, dist2, 20, stepsize) do g
+    results2 = samplepercolations(graph, dist2, 10, stepsize) do g
         reduce(max, 0, length.(connected_components(g)))
     end
 
-    println(percolation_area(results2, stepsize))
+    println(percolation_area(results2))
     # println(results2[1, :])
     plot(0.0:stepsize:1.0, smoothcurves(normalizecurves(results2), stepsize), color = "g")
 end
 
 
-function test(graph = Graph(100, 300))
+function test(graph = Graph(1000, 1000))
     error_trace = Float64[]
-    infos = [:degree, :inv_degree]
+    infos = [:inv_degree, :degree]
 
     function log_annealing(;kwargs...)
         args = Dict(kwargs)
@@ -176,10 +176,11 @@ function test(graph = Graph(100, 300))
         end
     end
 
-    params = annealing(percolation_loss(graph, infos, 10), randn(length(infos)),
-                       1000.0, 0.99, 0.1, (s, v) -> s > 1000;
+    params = annealing(percolation_loss(graph, infos, 10), fill(0.0, length(infos)),
+                       10.0, 0.9, 0.05, (s, v) -> s > 500;
                        debug_callback = log_annealing)
 
+    figure()
     plot(error_trace)
 end
 
