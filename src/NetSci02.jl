@@ -20,7 +20,7 @@ function samplepercolations(measure::Function,
                             graph::Graph,
                             node_distributions::Function,
                             repetitions::Integer,
-                            stepsize = 0.1,
+                            stepsize = 0.05,
                             result_type = typeof(measure(Graph(1, 0))))
     const vertices = nv(graph)
     const range = 0.0:stepsize:1.0
