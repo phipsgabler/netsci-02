@@ -73,7 +73,14 @@ function informed_probabilities(graph::Graph,
 end
 
 
-function makedistributions(logits)
+"""
+    makedistributions(logits::Vector{Float64})::Function
+
+Convert a vector of weight values for every node (`logits`) into a parametrized Bernoulli
+distribution for each node, such that the expected fraction of nodes after using this for
+percolation depends on the parameter (but the individual probabilities may differ).
+"""
+function makedistributions(logits::AbstractArray{Float64, 1})::Function
     probabilities = logistic.(logits)
     return function (φ)
         scaled_probabilities = probabilities .* (φ / mean(probabilities))
@@ -81,15 +88,36 @@ function makedistributions(logits)
     end
 end
 
-function smoothcurves(curves, stepsize)
+
+"""
+    smoothcurves(curves::AbstractArray{Float64, 2})
+
+Return the smoothed average of the given `curves` (using Loess regression).
+"""
+function smoothcurves{T<:Number}(curves::AbstractArray{T, 2})
+    stepsize = 1 / (size(curves)[end] - 1)
     range = 0.0:stepsize:1.0
     average_curve = squeeze(mapslices(mean, curves, 1), 1)
     loess_curve = predict(loess(range, average_curve), range)
 end
 
-normalizecurves(curves) = curves ./ mapslices(maximum, curves, 2)
 
-function percolation_area(curves, smooth = true)
+"""
+    normalizecurves(curves::AbstractArray{Float64, 2})
+
+Normalize all curves to the range [0, 1] by their maximum.
+"""
+normalizecurves{T<:Number}(curves::AbstractArray{T, 2}) = curves ./ mapslices(maximum, curves, 2)
+
+
+"""
+    percolation_area{T<:Number}(curves::AbstractArray{T, 2}, smooth = true)
+
+Estimate the area under the sampled percolation curves by averaging and calculating the area.
+If `smooth` is true, uses Loess regression and numerical integration, otherwise simply sum up and
+weight by the stepsize.
+"""
+function percolation_area{T<:Number}(curves::AbstractArray{T, 2}, smooth = true)
     normalized_curves = normalizecurves(curves)
     samples = size(curves)[1]
     stepsize = 1 / (size(curves)[end] - 1)
@@ -104,7 +132,6 @@ function percolation_area(curves, smooth = true)
         return sum(normalized_curves) * stepsize / samples
     end
 end
-
 
 
 """
@@ -125,6 +152,10 @@ function percolation_loss(graph::Graph, infos::Vector{Symbol}, samples = 10, ste
 end
 
 
+
+
+
+
 function simulate_random(graph = Graph(1000, 1000))
     const stepsize = 0.05
     const range = 0.0:stepsize:1.0
@@ -141,7 +172,7 @@ function simulate_random(graph = Graph(1000, 1000))
 
     println(percolation_area(results1))
     # println(results1[1, :])
-    plot(0.0:stepsize:1.0, smoothcurves(normalizecurves(results1), stepsize), color = "r")
+    plot(0.0:stepsize:1.0, smoothcurves(normalizecurves(results1)), color = "r")
 
     results2 = samplepercolations(graph, dist2, 10, stepsize) do g
         reduce(max, 0, length.(connected_components(g)))
@@ -149,7 +180,7 @@ function simulate_random(graph = Graph(1000, 1000))
 
     println(percolation_area(results2))
     # println(results2[1, :])
-    plot(0.0:stepsize:1.0, smoothcurves(normalizecurves(results2), stepsize), color = "g")
+    plot(0.0:stepsize:1.0, smoothcurves(normalizecurves(results2)), color = "g")
 end
 
 
@@ -171,7 +202,7 @@ function test(graph = Graph(1000, 1000))
                 curves = samplepercolations(graph, dist, 1, 0.05) do g
                     reduce(max, 0, length.(connected_components(g)))
                 end
-                plot(0.0:0.05:1.0, smoothcurves(normalizecurves(curves), 0.05))
+                plot(0.0:0.05:1.0, smoothcurves(normalizecurves(curves)))
             end
         end
     end
