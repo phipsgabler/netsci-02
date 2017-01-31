@@ -30,7 +30,7 @@ end
 
 function test_annealing(graph = Graph(1000, 1000))
     error_trace = Float64[]
-    infos = [:inv_degree, :degree]
+    infos = [:degree, :local_clustering]
 
     function log_annealing(;kwargs...)
         args = Dict(kwargs)
@@ -52,7 +52,7 @@ function test_annealing(graph = Graph(1000, 1000))
     end
 
     params = annealing(percolation_loss(graph, infos, 10), fill(0.0, length(infos)),
-                       10.0, 0.9, 0.05, (s, v) -> s > 500;
+                       10.0, 0.9, 0.01, (s, v) -> s > 500;
                        debug_callback = log_annealing)
 
     figure()

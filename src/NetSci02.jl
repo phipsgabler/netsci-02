@@ -60,8 +60,8 @@ function informed_probabilities(graph::Graph,
         :degree => g -> degree(g),
         :inv_degree => g -> 1 ./ (degree(g) + eps()),
         :local_clustering => g -> local_clustering_coefficient(g),
-        :neighbourhood2 => g -> map(v -> length(neighborhood(g, v, 2)), vertices(g)) / maxdegrees,
-        :neighbourhood3 => g -> map(v -> length(neighborhood(g, v, 3)), vertices(g)) / maxdegrees
+        :neighborhood2 => g -> map(v -> length(neighborhood(g, v, 2)), vertices(g)) / maxdegrees,
+        :neighborhood3 => g -> map(v -> length(neighborhood(g, v, 3)), vertices(g)) / maxdegrees
     )
     
     information = Array(Float64, nv(graph), length(infos))
@@ -70,6 +70,15 @@ function informed_probabilities(graph::Graph,
     end
 
     return makedistributions(information * weights)
+end
+
+"""
+    uninformed_probabilities(graph::Graph)
+
+Like `informed_probabilities`, but just use the same distribution based on `φ` for every node.
+"""
+function uninformed_probabilities(graph::Graph)
+    return φ -> Bernoulli.(fill(φ, nv(graph)))
 end
 
 
@@ -135,26 +144,104 @@ end
 
 
 """
+    max_component_size(g::Graph)
+
+Calculate the size of the larges connected component of `g`.
+"""
+max_component_size(g::Graph) = reduce(max, 0, length.(connected_components(g)))
+
+
+"""
     percolation_loss(graph::Graph, infos::Vector{Symbol}, samples, stepsize)
 
 Construct a loss function which samples the expected area of the percolation curve of `graph`,
 using the parameter as weightings for local information.
 """
-function percolation_loss(graph::Graph, infos::Vector{Symbol}, samples = 10, stepsize = 0.05)
+function percolation_loss(graph::Graph, infos::Vector{Symbol}, samples = 10, stepsize = 0.05,
+                          measure = max_component_size)
     function loss(parameter)
         dist = informed_probabilities(graph, parameter, infos)
-        curves = samplepercolations(graph, dist, samples, stepsize) do g
-            reduce(max, 0, length.(connected_components(g)))
-        end
-
+        curves = samplepercolations(measure, graph, dist, samples, stepsize)
         return percolation_area(curves)
     end
 end
 
 
+function main()
+    fb1 = readnetwork("../data/facebook1.txt")
+    fb2 = readnetwork("../data/facebook2.txt")
+    austin = readnetwork("../data/austin.txt")
+    philadelphia = readnetwork("../data/philadelphia.txt")
+
+    infos = [:degree, :local_clustering, :neighborhood2]
+    stepsize = 0.05
+    samples = 10
+
+    # train stuff on fb1 and austin
+    init_temp, temp_decay, exploration_size = 10.0, 0.9, 0.05
+    iterations = 500
+
+    function log_annealing(;kwargs...)
+        args = Dict(kwargs)
+        # push!(error_trace, args[:f_new])
+        
+        if args[:steps] % 100 == 0
+            println(args[:steps], " steps, T = ", args[:T])
+            println("\tParameters: ", args[:x_new])
+            println("\tError: ", args[:f_new])
+        end
+    end
+    
+    train(graph) = annealing(percolation_loss(graph, infos, samples, stepsize),
+                             fill(0.0, length(infos)),
+                             init_temp, temp_decay, exploration_size,
+                             (s, v) -> s > iterations;
+                             debug_callback = log_annealing)
+
+    fb1_param = train(fb1)
+    austin_param = train(austin)
+    println("Learned parameters (fb1): ", fb1_param)
+    println("Learned parameters (austin): ", austin_param)
 
 
+    # validate stuff on fb2 and philadelphia
+    fb2_dists_baseline = uninformed_probabilities(fb2)
+    philadelphia_dists_baseline = uninformed_probabilities(philadelphia)
+    fb2_dists_optimized = informed_probabilities(fb2, fb1_param, infos)
+    philadelphia_dists_optimized = informed_probabilities(philadelphia, austin_param, infos)
 
+    fb2_samples_baseline = samplepercolations(max_component_size, fb2, fb2_dists_baseline,
+                                              samples, stepsize)
+    philadelphia_samples_baseline = samplepercolations(max_component_size, philadelphia,
+                                                       philadelphia_dists_baseline,
+                                                       samples, stepsize)
+    fb2_samples_optimized = samplepercolations(max_component_size, fb2, fb2_dists_optimized,
+                                               samples, stepsize)
+    philadelphia_samples_optimized = samplepercolations(max_component_size, philadelphia,
+                                                        philadelphia_dists_optimized,
+                                                        samples, stepsize)
+
+    fb2_curve_baseline = smoothcurves(normalizecurves(fb2_samples_baseline))
+    philadelphia_curve_baseline = smoothcurves(normalizecurves(philadelphia_samples_baseline))
+    fb2_curve_optimized = smoothcurves(normalizecurves(fb2_samples_optimized))
+    philadelphia_curve_optimized = smoothcurves(normalizecurves(philadelphia_samples_optimized))
+
+    range = 0.0:stepsize:1.0
+    open("../evaluation/results.txt", "w") do f
+        for (x, y) in zip(range, fb2_curve_baseline)
+            write(f, "fb2 baseline $x $y \n")
+        end
+        for (x, y) in zip(range, fb2_curve_optimized)
+            write(f, "fb2 optimized $x $y \n")
+        end
+        for (x, y) in zip(range, philadelphia_curve_baseline)
+            write(f, "philadelphia baseline $x $y \n")
+        end
+        for (x, y) in zip(range, philadelphia_curve_optimized)
+            write(f, "philadelphia optimized $x $y \n")
+        end
+    end
+end
 
 
 
