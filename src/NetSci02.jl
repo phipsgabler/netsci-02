@@ -57,8 +57,8 @@ function informed_probabilities(graph::Graph,
                                 infos::Vector{Symbol})::Function
     const maxdegrees = nv(graph) * (nv(graph) + 1) / 2
     const information_functions = Dict(
-        :degree => g -> degree(g),
-        :inv_degree => g -> 1 ./ (degree(g) + eps()),
+        :degree => g -> degree(g) / maxdegrees,
+        :inv_degree => g -> 1 ./ (degree(g) / maxdegrees + eps()),
         :local_clustering => g -> local_clustering_coefficient(g),
         :neighborhood2 => g -> map(v -> length(neighborhood(g, v, 2)), vertices(g)) / maxdegrees,
         :neighborhood3 => g -> map(v -> length(neighborhood(g, v, 3)), vertices(g)) / maxdegrees
@@ -71,6 +71,7 @@ function informed_probabilities(graph::Graph,
 
     return makedistributions(information * weights)
 end
+
 
 """
     uninformed_probabilities(graph::Graph)
@@ -179,7 +180,7 @@ function main()
 
     # train stuff on fb1 and austin
     init_temp, temp_decay, exploration_size = 10.0, 0.9, 0.05
-    iterations = 500
+    iterations = 400
 
     function log_annealing(;kwargs...)
         args = Dict(kwargs)
