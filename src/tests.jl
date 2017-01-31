@@ -1,3 +1,5 @@
+using PyPlot
+
 function test_sampling(graph = Graph(1000, 1000))
     const stepsize = 0.05
     const range = 0.0:stepsize:1.0

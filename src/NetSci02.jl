@@ -1,9 +1,8 @@
 module NetSci02
 
-using LightGraphs, GraphPlot
+using LightGraphs
 using Distributions
 using Loess
-using PyPlot
 
 include("utils.jl")
 include("tests.jl")
