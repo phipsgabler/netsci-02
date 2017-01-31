@@ -29,5 +29,12 @@ and compare the result obtained by optimization to the baseline of uniform perco
 
 All code and text by me are [unlicensed](http://unlicense.org/).
 
-The data sets are taken from [Konect](http://konect.uni-koblenz.de), and thus subject to the 
-[Creative Commons Attribution-ShareAlike 2.0 Germany License](http://konect.uni-koblenz.de/license).
+Sources of the data sets (I have preprocessed some of them):
+
+- Facebook: J. McAuley and J. Leskovec. Learning to Discover Social Circles in Ego Networks. NIPS, 2012; via [SNAP](http://snap.stanford.edu/data/egonets-Facebook.html)
+- US Powergrid: Watts, D. J., Strogatz, S. H., 1998. Collective dynamics of “small-world” networks. Nature 393, 440-442; via [Tore Opsahl](https://toreopsahl.com/datasets/#uspowergrid)
+- Euroroad: [KONECT](http://konect.uni-koblenz.de/networks/subelj_euroroad)
+- Philadelphia transportation: [TransportationNetworks](https://github.com/bstabler/TransportationNetworks/tree/a6a968de8f6db1bc15ff0ff3b19ebd8a50afc79e/Philadelphia)
+- Austin transportation: [TransportationNetworks](https://github.com/bstabler/TransportationNetworks/tree/a6a968de8f6db1bc15ff0ff3b19ebd8a50afc79e/Austin)
+
+
