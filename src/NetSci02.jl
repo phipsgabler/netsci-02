@@ -241,39 +241,6 @@ function trainandtest(name::String, train_graph::Graph, test_graph::Graph,
 end
 
 
-function fixtest(name::String, test_graph::Graph, trained_param::AbstractArray{Float64, 1},
-              results_file::String, variant::String; mode::String = "a", parameters...)
-    for (s, v) in parameters
-        @eval $s = $v
-    end
-
-    baseline_dist = uninformed_probabilities(test_graph)
-    optimized_dist = informed_probabilities(test_graph, trained_param, infos)
-
-    baseline_samples = samplepercolations(max_component_size, test_graph,
-                                          baseline_dist, samples, stepsize)
-    optimized_samples = samplepercolations(max_component_size, test_graph,
-                                           optimized_dist, samples, stepsize)
-
-    baseline_curve = normalizecurves(baseline_samples)
-    optimized_curve = normalizecurves(optimized_samples)
-
-    range = 0.0:stepsize:1.0
-    open(results_file, mode) do f
-        for (x, y, y2) in zip(range,
-                              smoothcurves(baseline_curve, false),
-                              smoothcurves(baseline_curve, true))
-            write(f, "$name $variant baseline $x $y $y2\n")
-        end
-        for (x, y, y2) in zip(range,
-                          smoothcurves(optimized_curve, false),
-                          smoothcurves(optimized_curve, true))
-            write(f, "$name $variant optimized $x $y $y2\n")
-        end
-    end
-end
-
-
 function main()
     fb1 = readnetwork("../data/facebook1.txt")
     fb2 = readnetwork("../data/facebook2.txt")
@@ -309,14 +276,15 @@ function main()
         :exploration_size => 0.05,
         :iterations => 400)
 
-    # for (variant, infos) in info_variants
-    #     for (name, (train, test)) in examples
-    #         trainandtest(name, train, test,
-    #                      "../evaluation/results1.txt", variant;
-    #                      mode = "a", infos = infos, training_parameters...)
-    #     end
-    # end
+    for (variant, infos) in info_variants
+        for (name, (train, test)) in examples
+            trainandtest(name, train, test,
+                         "../evaluation/results1.txt", variant;
+                         mode = "a", infos = infos, training_parameters...)
+        end
+    end
 
+    # this turns out to be worse...
     # for (variant, infos) in info_variants_n
     #     for (name, (train, test)) in examples
     #         trainandtest(name, train, test,
@@ -324,34 +292,6 @@ function main()
     #                      mode = "a", infos = infos, training_parameters...)
     #     end
     # end
-
-    p1_train = [("facebook", fb1, "d") => [0.5],
-                ("traffic", austin, "d") => [0.65],
-                ("random", random1, "d") => [0.25],
-                ("facebook", fb1, "i") => [-1.1],
-                ("traffic", austin, "i") => [0.25],
-                ("random", random1, "i") => [0.4],
-                ("facebook", fb1, "l") => [1.1],
-                ("traffic", austin, "l") => [0.2],
-                ("random", random1, "l") => [0.2],
-                ("facebook", fb1, "n") => [0.05],
-                ("traffic", austin, "n") => [0.5],
-                ("random", random1, "n") => [0.05],
-                ("facebook", fb1, "dl") => [0.400757,0.737475],
-                ("traffic", austin, "dl") => [0.188876,-0.214628],
-                ("random", random1, "dl") => [0.301184,-0.765181],
-                ("facebook", fb1, "dln") => [0.185994,-0.475402,0.0138872],
-                ("traffic", austin, "dln") => [0.194423,0.255597,0.73907],
-                ("random", random1, "dln") => [0.147955,-0.133006,0.0134066]]
-
-    for ((name, graph, variant), params) in p1_train
-        fixtest(name, graph, params,
-                "../evaluation/training1.txt", variant;
-                mode = "a", infos = info_variants[variant], training_parameters...)
-    end
-    
 end
-
-
 
 end
