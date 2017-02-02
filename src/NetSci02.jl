@@ -222,7 +222,7 @@ function trainandtest(name::String, train_graph::Graph, test_graph::Graph,
                                            optimized_dist, samples, stepsize)
 
     baseline_curve = normalizecurves(baseline_samples)
-    optimized_curve = normalizecurves(baseline_samples)
+    optimized_curve = normalizecurves(optimized_samples)
 
     range = 0.0:stepsize:1.0
     open(results_file, mode) do f
@@ -241,30 +241,54 @@ function trainandtest(name::String, train_graph::Graph, test_graph::Graph,
 end
 
 
+function fixtest(name::String, test_graph::Graph, trained_param::AbstractArray{Float64, 1},
+              results_file::String, variant::String; mode::String = "a", parameters...)
+    for (s, v) in parameters
+        @eval $s = $v
+    end
+
+    optimized_dist = informed_probabilities(test_graph, trained_param, infos)
+    optimized_samples = samplepercolations(max_component_size, test_graph,
+                                           optimized_dist, samples, stepsize)
+    optimized_curve = normalizecurves(optimized_samples)
+
+    range = 0.0:stepsize:1.0
+    open(results_file, mode) do f
+        for (x, y, y2) in zip(range,
+                          smoothcurves(optimized_curve, false),
+                          smoothcurves(optimized_curve, true))
+            write(f, "$name $variant optimized $x $y $y2\n")
+        end
+    end
+end
+
+
 function main()
-    examples = ["facebook" => (readnetwork("../data/facebook1.txt"),
-                               readnetwork("../data/facebook2.txt")),
-                "traffic" => (readnetwork("../data/austin.txt"),
-                              readnetwork("../data/philadelphia.txt")),
-                "random" => (Graph(2000, 5000),
-                             Graph(2000, 5000))]
+    fb1 = readnetwork("../data/facebook1.txt")
+    fb2 = readnetwork("../data/facebook2.txt")
+    austin = readnetwork("../data/austin.txt")
+    philadelphia = readnetwork("../data/philadelphia.txt")
+    random1 = Graph(2000, 5000)
+    random2 = Graph(2000, 5000)
+    
+    examples = ["facebook" => (fb1, fb2),
+                "traffic" => (austin, philadelphia),
+                "random" => (random1, random2)]
 
     
-    info_variants = ["d" => [:degree],
-                     "i" => [:inv_degree],
-                     "l" => [:local_clustering],
-                     "n" => [:neighborhood2],
-                     "dl" => [:degree, :local_clustering],
-                     "dln" => [:degree, :local_clustering, :neighborhood2]]
+    info_variants = Dict("d" => [:degree],
+                         "i" => [:inv_degree],
+                         "l" => [:local_clustering],
+                         "n" => [:neighborhood2],
+                         "dl" => [:degree, :local_clustering],
+                         "dln" => [:degree, :local_clustering, :neighborhood2])
 
-    info_variants_n = ["i" => [:inv_degree_n],
-                       "d" => [:degree_n],
-                       "l" => [:local_clustering],
-                       "n" => [:neighborhood2_n],
-                       "dl" => [:degree_n, :local_clustering],
-                       "dln" => [:degree_n, :local_clustering, :neighborhood2_n]]
-    
-    # info_variants = ["d" => [:degree]]
+    info_variants_n = Dict("i" => [:inv_degree_n],
+                           "d" => [:degree_n],
+                           "l" => [:local_clustering],
+                           "n" => [:neighborhood2_n],
+                           "dl" => [:degree_n, :local_clustering],
+                           "dln" => [:degree_n, :local_clustering, :neighborhood2_n])
     
     training_parameters = Dict(
         :stepsize => 0.05,
@@ -282,12 +306,61 @@ function main()
     #     end
     # end
 
-    for (variant, infos) in info_variants_n
-        for (name, (train, test)) in examples
-            trainandtest(name, train, test,
-                         "../evaluation/results2.txt", variant;
-                         mode = "a", infos = infos, training_parameters...)
-        end
+    # for (variant, infos) in info_variants_n
+    #     for (name, (train, test)) in examples
+    #         trainandtest(name, train, test,
+    #                      "../evaluation/results2.txt", variant;
+    #                      mode = "a", infos = infos, training_parameters...)
+    #     end
+    # end
+
+    p1 = [("facebook", fb2, "d") => [0.5],
+          ("traffic", philadelphia, "d") => [0.65],
+          ("random", random2, "d") => [0.25],
+          ("facebook", fb2, "i") => [-1.1],
+          ("traffic", philadelphia, "i") => [0.25],
+          ("random", random2, "i") => [0.4],
+          ("facebook", fb2, "l") => [1.1],
+          ("traffic", philadelphia, "l") => [0.2],
+          ("random", random2, "l") => [0.2],
+          ("facebook", fb2, "n") => [0.05],
+          ("traffic", philadelphia, "n") => [0.5],
+          ("random", random2, "n") => [0.05],
+          ("facebook", fb2, "dl") => [0.400757,0.737475],
+          ("traffic", philadelphia, "dl") => [0.188876,-0.214628],
+          ("random", random2, "dl") => [0.301184,-0.765181],
+          ("facebook", fb2, "dln") => [0.185994,-0.475402,0.0138872],
+          ("traffic", philadelphia, "dln") => [0.194423,0.255597,0.73907],
+          ("random", random2, "dln") => [0.147955,-0.133006,0.0134066]]
+    p2 = [("facebook", fb2, "d") => [-0.55],
+          ("traffic", philadelphia, "d") => [-0.6],
+          ("random", random2, "d") => [-0.1],
+          ("facebook", fb2, "i") => [-0.35],
+          ("traffic", philadelphia, "i") => [0.35],
+          ("random", random2, "i") => [-0.2],
+          ("facebook", fb2, "l") => [2.3],
+          ("traffic", philadelphia, "l") => [-0.25],
+          ("random", random2, "l") => [0.05],
+          ("facebook", fb2, "n") => [0.2],
+          ("traffic", philadelphia, "n") => [-0.25],
+          ("random", random2, "n") => [-0.4],
+          ("facebook", fb2, "dl") => [-0.676532,1.5025],
+          ("traffic", philadelphia, "dl") => [0.233561,-0.0764628],
+          ("random", random2, "dl") => [-0.00159558,-0.0980889],
+          ("facebook", fb2, "dln") => [-0.0484588,1.15782,-0.069973],
+          ("traffic", philadelphia, "dln") => [0.0800902,0.150924,0.0781754],
+          ("random", random2, "dln") => [0.506437,0.120634,0.286868]]
+
+    for ((name, graph, variant), params) in p1
+        fixtest(name, graph, params,
+                "../evaluation/results1.txt", variant;
+                mode = "a", infos = info_variants[variant], training_parameters...)
+    end
+    
+    for ((name, graph, variant), params) in p2
+        fixtest(name, graph, params,
+                "../evaluation/results2.txt", variant;
+                mode = "a", infos = info_variants_n[variant], training_parameters...)
     end
     
 end
