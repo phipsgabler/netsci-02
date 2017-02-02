@@ -57,13 +57,13 @@
 \begin{frame}{Fast percolation}
   \begin{block}{Reminder}
     Percolation is the study of the global connection behaviour of a network when removin a certain
-    fraction of its nodes, measured in the (relative) size of the larges connected component.
+    fraction of its nodes, measured in the (relative) size of the largest connected component.
   \end{block}
   
   \begin{itemize}
   \item Goal: learn a way of informed percolation which optimally disconnects a network (remove
     minimum amount of nodes with maximum effect)
-  \item Useful for preventing desease spreading, or to find critical nodes in the network
+  \item Maybe useful: for preventing desease spreading, or to find critical nodes in the network
   \end{itemize}
 \end{frame}
 
@@ -73,12 +73,12 @@
 \begin{frame}{Setting up a model}
 We attach to each node a Bernoulli random variable of failure:
 \begin{align*}
-  \hat{\mathbf{p}}_i &= \sigma(\mathbf{w}^T \cdot \mathbf{info}_i) \\
+  \hat{\mathbf{p}}_i &= \sigma(\mathbf{w}^T \cdot \mathbf{info}_i), \\
   \mathbf{Fail}_i(\varphi) &\sim \text{Bernoulli}\left(\hat{\mathbf{p}}_i\,
-                      \frac{\varphi}{\frac{1}{n}\sum_i \hat{\mathbf{p}}_i}\right)
+                      \frac{\varphi}{\frac{1}{n}\sum_i \hat{\mathbf{p}}_i}\right),
 \end{align*}
 where \(\sigma\) is the logistic function, \(\mathbf{info}\) is a vector of local information (eg.,
-degree), and \(\mathbf{w}\) the weighting of this information (a logistic model, sort of).
+degree), and \(\mathbf{w}\) the weighting of this information (a logistic model, sort of).\\~\\
 
 The value \(\varphi\) varies in \([0; 1]\) and describes the expected fraction of failing nodes.  The
 individual probabilities are scaled accordingly.
@@ -88,7 +88,7 @@ individual probabilities are scaled accordingly.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Experimental Setup}
-\begin{frame}
+\begin{frame}{Practical approach}
   \begin{itemize}
   \item Minimize the area under the percolation curve with respect to the weights \(\mathbf{w}\),
     using simulated annealing
@@ -167,7 +167,7 @@ individual probabilities are scaled accordingly.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Discussion}
-\begin{frame}{Observations}
+\begin{frame}{Observations\footnotemark}
   \begin{itemize}
   \item It works, basically, although the impact is not great
   \item The parametrization seems can be very dependent on the network, and not transferable in
@@ -176,6 +176,8 @@ individual probabilities are scaled accordingly.
   \item I also tried inverse degree, 3-neighbourhood, but they don't work better
   \item Interestingly, normalizing the information by maximum degree makes things worse
   \end{itemize}
+  \footnotetext[1]{Code and data:
+    \protect\url{https://github.com/phipsgabler/netsci-02}}
 \end{frame}
 
 
