@@ -56,12 +56,18 @@ function informed_probabilities(graph::Graph,
                                 weights::Vector{Float64},
                                 infos::Vector{Symbol})::Function
     const maxdegrees = nv(graph) * (nv(graph) + 1) / 2
+
+    # wherever meaningful, there is a normalized (*_n) and an unnormalized variant
     const information_functions = Dict(
-        :degree => g -> degree(g) / maxdegrees,
-        :inv_degree => g -> 1 ./ (degree(g) / maxdegrees + eps()),
+        :degree => g -> degree(g),
+        :degree_n => g -> degree(g) / maxdegrees,
+        :inv_degree => g -> 1 ./ (degree(g) + eps()),
+        :inv_degree_n => g -> 1 ./ ((degree(g) + eps()) / maxdegrees),
         :local_clustering => g -> local_clustering_coefficient(g),
-        :neighborhood2 => g -> map(v -> length(neighborhood(g, v, 2)), vertices(g)) / maxdegrees,
-        :neighborhood3 => g -> map(v -> length(neighborhood(g, v, 3)), vertices(g)) / maxdegrees
+        :neighborhood2 => g -> map(v -> length(neighborhood(g, v, 2)), vertices(g)),
+        :neighborhood2_n => g -> map(v -> length(neighborhood(g, v, 2)), vertices(g)) / maxdegrees,
+        :neighborhood3 => g -> map(v -> length(neighborhood(g, v, 3)), vertices(g)),
+        :neighborhood3_n => g -> map(v -> length(neighborhood(g, v, 3)), vertices(g)) / maxdegrees
     )
     
     information = Array(Float64, nv(graph), length(infos))
@@ -104,11 +110,16 @@ end
 
 Return the smoothed average of the given `curves` (using Loess regression).
 """
-function smoothcurves{T<:Number}(curves::AbstractArray{T, 2})
-    stepsize = 1 / (size(curves)[end] - 1)
-    range = 0.0:stepsize:1.0
+function smoothcurves{T<:Number}(curves::AbstractArray{T, 2}, use_loess = true)
     average_curve = squeeze(mapslices(mean, curves, 1), 1)
-    loess_curve = predict(loess(range, average_curve), range)
+
+    if use_loess
+        stepsize = 1 / (size(curves)[end] - 1)
+        range = 0.0:stepsize:1.0
+        return predict(loess(range, average_curve), range)
+    else
+        return average_curve
+    end
 end
 
 
@@ -168,80 +179,117 @@ function percolation_loss(graph::Graph, infos::Vector{Symbol}, samples = 10, ste
 end
 
 
-function main()
-    fb1 = readnetwork("../data/facebook1.txt")
-    fb2 = readnetwork("../data/facebook2.txt")
-    austin = readnetwork("../data/austin.txt")
-    philadelphia = readnetwork("../data/philadelphia.txt")
 
-    infos = [:degree, :local_clustering, :neighborhood2]
-    stepsize = 0.05
-    samples = 10
 
-    # train stuff on fb1 and austin
-    init_temp, temp_decay, exploration_size = 10.0, 0.9, 0.05
-    iterations = 400
 
-    function log_annealing(;kwargs...)
-        args = Dict(kwargs)
-        # push!(error_trace, args[:f_new])
+####################################################################################################
+# TRAINING AND TESTING
+####################################################################################################
+
+function log_annealing(;kwargs...)
+    args = Dict(kwargs)
+    # push!(error_trace, args[:f_new])
+    
+    if args[:steps] % 100 == 0
+        println(args[:steps], " steps, T = ", args[:T])
+        println("\tParameters: ", args[:x_new])
+        println("\tError: ", args[:f_new])
+    end
+end
+
+
+function trainandtest(name::String, train_graph::Graph, test_graph::Graph,
+                      results_file::String, variant::String;
+                      mode = "a", parameters...)
+    for (s, v) in parameters
+        @eval $s = $v
+    end
+
+    println("Training on ", name, " using ", variant, "...")
+    trained_param = annealing(percolation_loss(train_graph, infos, samples, stepsize),
+                              fill(0.0, length(infos)),
+                              init_temp, temp_decay, exploration_size,
+                              (s, v) -> s > iterations;
+                              debug_callback = log_annealing)
+    println("Learned parameters (", name, "): ", trained_param, "\n")
+
+    baseline_dist = uninformed_probabilities(test_graph)
+    optimized_dist = informed_probabilities(test_graph, trained_param, infos)
+
+    baseline_samples = samplepercolations(max_component_size, test_graph,
+                                          baseline_dist, samples, stepsize)
+    optimized_samples = samplepercolations(max_component_size, test_graph,
+                                           optimized_dist, samples, stepsize)
+
+    baseline_curve = normalizecurves(baseline_samples)
+    optimized_curve = normalizecurves(baseline_samples)
+
+    range = 0.0:stepsize:1.0
+    open(results_file, mode) do f
+        for (x, y, y2) in zip(range,
+                              smoothcurves(baseline_curve, false),
+                              smoothcurves(baseline_curve, true))
+            write(f, "$name $variant baseline $x $y $y2\n")
+        end
         
-        if args[:steps] % 100 == 0
-            println(args[:steps], " steps, T = ", args[:T])
-            println("\tParameters: ", args[:x_new])
-            println("\tError: ", args[:f_new])
+        for (x, y, y2) in zip(range,
+                          smoothcurves(optimized_curve, false),
+                          smoothcurves(optimized_curve, true))
+            write(f, "$name $variant optimized $x $y $y2\n")
+        end
+    end
+end
+
+
+function main()
+    examples = ["facebook" => (readnetwork("../data/facebook1.txt"),
+                               readnetwork("../data/facebook2.txt")),
+                "traffic" => (readnetwork("../data/austin.txt"),
+                              readnetwork("../data/philadelphia.txt")),
+                "random" => (Graph(2000, 5000),
+                             Graph(2000, 5000))]
+
+    
+    info_variants = ["d" => [:degree],
+                     "i" => [:inv_degree],
+                     "l" => [:local_clustering],
+                     "n" => [:neighborhood2],
+                     "dl" => [:degree, :local_clustering],
+                     "dln" => [:degree, :local_clustering, :neighborhood2]]
+
+    info_variants_n = ["d" => [:degree_n],
+                       "i" => [:inv_degree_n],
+                       "l" => [:local_clustering],
+                       "n" => [:neighborhood2_n],
+                       "dl" => [:degree_n, :local_clustering],
+                       "dln" => [:degree_n, :local_clustering, :neighborhood2_n]]
+    
+    # info_variants = ["d" => [:degree]]
+    
+    training_parameters = Dict(
+        :stepsize => 0.05,
+        :samples => 10,
+        :init_temp => 10.0,
+        :temp_decay => 0.9,
+        :exploration_size => 0.05,
+        :iterations => 400)
+
+    # for (variant, infos) in info_variants
+    #     for (name, (train, test)) in examples
+    #         trainandtest(name, train, test,
+    #                      "../evaluation/results1.txt", variant;
+    #                      mode = "a", infos = infos, training_parameters...)
+    #     end
+    # end
+
+    for (variant, infos) in info_variants_n
+        for (name, (train, test)) in examples
+            trainandtest(name, train, test,
+                         "../evaluation/results2.txt", variant;
+                         mode = "a", infos = infos, training_parameters...)
         end
     end
     
-    train(graph) = annealing(percolation_loss(graph, infos, samples, stepsize),
-                             fill(0.0, length(infos)),
-                             init_temp, temp_decay, exploration_size,
-                             (s, v) -> s > iterations;
-                             debug_callback = log_annealing)
-
-    fb1_param = train(fb1)
-    austin_param = train(austin)
-    println("Learned parameters (fb1): ", fb1_param)
-    println("Learned parameters (austin): ", austin_param)
-
-
-    # validate stuff on fb2 and philadelphia
-    fb2_dists_baseline = uninformed_probabilities(fb2)
-    philadelphia_dists_baseline = uninformed_probabilities(philadelphia)
-    fb2_dists_optimized = informed_probabilities(fb2, fb1_param, infos)
-    philadelphia_dists_optimized = informed_probabilities(philadelphia, austin_param, infos)
-
-    fb2_samples_baseline = samplepercolations(max_component_size, fb2, fb2_dists_baseline,
-                                              samples, stepsize)
-    philadelphia_samples_baseline = samplepercolations(max_component_size, philadelphia,
-                                                       philadelphia_dists_baseline,
-                                                       samples, stepsize)
-    fb2_samples_optimized = samplepercolations(max_component_size, fb2, fb2_dists_optimized,
-                                               samples, stepsize)
-    philadelphia_samples_optimized = samplepercolations(max_component_size, philadelphia,
-                                                        philadelphia_dists_optimized,
-                                                        samples, stepsize)
-
-    fb2_curve_baseline = smoothcurves(normalizecurves(fb2_samples_baseline))
-    philadelphia_curve_baseline = smoothcurves(normalizecurves(philadelphia_samples_baseline))
-    fb2_curve_optimized = smoothcurves(normalizecurves(fb2_samples_optimized))
-    philadelphia_curve_optimized = smoothcurves(normalizecurves(philadelphia_samples_optimized))
-
-    range = 0.0:stepsize:1.0
-    open("../evaluation/results.txt", "w") do f
-        for (x, y) in zip(range, fb2_curve_baseline)
-            write(f, "fb2 baseline $x $y \n")
-        end
-        for (x, y) in zip(range, fb2_curve_optimized)
-            write(f, "fb2 optimized $x $y \n")
-        end
-        for (x, y) in zip(range, philadelphia_curve_baseline)
-            write(f, "philadelphia baseline $x $y \n")
-        end
-        for (x, y) in zip(range, philadelphia_curve_optimized)
-            write(f, "philadelphia optimized $x $y \n")
-        end
-    end
 end
 
 
