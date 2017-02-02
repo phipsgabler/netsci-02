@@ -80,7 +80,7 @@ We attach to each node a Bernoulli random variable of failure:
 where \(\sigma\) is the logistic function, \(\mathbf{info}\) is a vector of local information (eg.,
 degree), and \(\mathbf{w}\) the weighting of this information (a logistic model, sort of).
 
-The value \(\varphi\) varies in \([0; 1]\) and describes the fraction of failing nodes.  The
+The value \(\varphi\) varies in \([0; 1]\) and describes the expected fraction of failing nodes.  The
 individual probabilities are scaled accordingly.
 \end{frame}
 
@@ -117,6 +117,8 @@ individual probabilities are scaled accordingly.
 \section{Results}
 \begin{frame}
 
+\includegraphics[width=\textwidth]{results.pdf}
+  
   % (facebook, d): [0.5] 0.3283630364889754
   % (traffic, d): [0.65] 0.21074304493798848
   % (random, d): [0.25] 0.4201843461802456
@@ -136,8 +138,24 @@ individual probabilities are scaled accordingly.
   % (traffic, dln): [0.194423,0.255597,0.73907] 0.217658817732126
   % (random, dln): [0.147955,-0.133006,0.0134066] 0.423664340534555
 
-
-
+  % (facebook, d): [-0.55] 0.471840848722235
+  % (traffic, d): [-0.6] 0.21650355502500723
+  % (random, d): [-0.1] 0.44100544039781314
+  % (facebook, i): [-0.35] 0.18307828314919564
+  % (traffic, i): [0.35] 0.21951807775693943
+  % (random, i): [-0.2] 0.43784038404490977
+  % (facebook, l): [2.3] 0.38007060763692424
+  % (traffic, l): [-0.25] 0.21509237602182799
+  % (random, l): [0.05] 0.44265720078375076
+  % (facebook, n): [0.2] 0.4689802470340089
+  % (traffic, n): [-0.25] 0.21884265918897558
+  % (random, n): [-0.4] 0.44351458013359263
+  % (facebook, dl): [-0.676532,1.5025] 0.4023356042400362
+  % (traffic, dl): [0.233561,-0.0764628] 0.2179749210675988
+  % (random, dl): [-0.00159558,-0.0980889] 0.4421562417761069
+  % (facebook, dln): [-0.0484588,1.15782,-0.069973] 0.406014520990275
+  % (traffic, dln): [0.0800902,0.150924,0.0781754] 0.21748833595083378
+  % (random, dln): [0.506437,0.120634,0.286868] 0.4413333259116106
   
 \end{frame}
 
