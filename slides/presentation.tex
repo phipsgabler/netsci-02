@@ -90,10 +90,11 @@ individual probabilities are scaled accordingly.
 \section{Experimental Setup}
 \begin{frame}
   \begin{itemize}
-  \item Minimize the area under the percolation curve with respect to the weights \(\mathbf{w}\)
-  \item This involves sampling the curves (several times) at each parameter evaluation
-  \item This is expensive, so I used simulated annealing~-- it requires the least amount of
-    evaluations of the loss function
+  \item Minimize the area under the percolation curve with respect to the weights \(\mathbf{w}\),
+    using simulated annealing
+  \item Sampling the curves (several times) at each parameter evaluation
+  \item Local information used: local clustering coefficient, degree, inverse degree, and size of
+    2-neighbourhood
   \item Compare some different network types:
   \end{itemize}
 
@@ -115,56 +116,66 @@ individual probabilities are scaled accordingly.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Results}
-\begin{frame}
-
-\includegraphics[width=\textwidth]{results.pdf}
-  
-  % (facebook, d): [0.5] 0.3283630364889754
-  % (traffic, d): [0.65] 0.21074304493798848
-  % (random, d): [0.25] 0.4201843461802456
-  % (facebook, i): [-1.1] 0.1810805834740875
-  % (traffic, i): [0.25] 0.2216547318219854
-  % (random, i): [0.4] 0.4517175677606427
-  % (facebook, l): [1.1] 0.4122167795684476
-  % (traffic, l): [0.2] 0.21651320595420895
-  % (random, l): [0.2] 0.4409616979378643
-  % (facebook, n): [0.05] 0.3342488376071866
-  % (traffic, n): [0.5] 0.21555049861067138
-  % (random, n): [0.05] 0.42808389546611614
-  % (facebook, dl): [0.400757,0.737475] 0.3283141710201117
-  % (traffic, dl): [0.188876,-0.214628] 0.21135127079299312
-  % (random, dl): [0.301184,-0.765181] 0.4183382696586946
-  % (facebook, dln): [0.185994,-0.475402,0.0138872] 0.3297293375203304
-  % (traffic, dln): [0.194423,0.255597,0.73907] 0.217658817732126
-  % (random, dln): [0.147955,-0.133006,0.0134066] 0.423664340534555
-
-  % (facebook, d): [-0.55] 0.471840848722235
-  % (traffic, d): [-0.6] 0.21650355502500723
-  % (random, d): [-0.1] 0.44100544039781314
-  % (facebook, i): [-0.35] 0.18307828314919564
-  % (traffic, i): [0.35] 0.21951807775693943
-  % (random, i): [-0.2] 0.43784038404490977
-  % (facebook, l): [2.3] 0.38007060763692424
-  % (traffic, l): [-0.25] 0.21509237602182799
-  % (random, l): [0.05] 0.44265720078375076
-  % (facebook, n): [0.2] 0.4689802470340089
-  % (traffic, n): [-0.25] 0.21884265918897558
-  % (random, n): [-0.4] 0.44351458013359263
-  % (facebook, dl): [-0.676532,1.5025] 0.4023356042400362
-  % (traffic, dl): [0.233561,-0.0764628] 0.2179749210675988
-  % (random, dl): [-0.00159558,-0.0980889] 0.4421562417761069
-  % (facebook, dln): [-0.0484588,1.15782,-0.069973] 0.406014520990275
-  % (traffic, dln): [0.0800902,0.150924,0.0781754] 0.21748833595083378
-  % (random, dln): [0.506437,0.120634,0.286868] 0.4413333259116106
-  
+\begin{frame}{Training}
+  \includegraphics[width=\textwidth]{training.pdf}
 \end{frame}
 
+\begin{frame}{Testing}
+  \includegraphics[width=\textwidth]{results.pdf}
+\end{frame}
+
+% unnormalized information
+% (facebook, d): [0.5] 0.3283630364889754
+% (traffic, d): [0.65] 0.21074304493798848
+% (random, d): [0.25] 0.4201843461802456
+% (facebook, i): [-1.1] 0.1810805834740875
+% (traffic, i): [0.25] 0.2216547318219854
+% (random, i): [0.4] 0.4517175677606427
+% (facebook, l): [1.1] 0.4122167795684476
+% (traffic, l): [0.2] 0.21651320595420895
+% (random, l): [0.2] 0.4409616979378643
+% (facebook, n): [0.05] 0.3342488376071866
+% (traffic, n): [0.5] 0.21555049861067138
+% (random, n): [0.05] 0.42808389546611614
+% (facebook, dl): [0.400757,0.737475] 0.3283141710201117
+% (traffic, dl): [0.188876,-0.214628] 0.21135127079299312
+% (random, dl): [0.301184,-0.765181] 0.4183382696586946
+% (facebook, dln): [0.185994,-0.475402,0.0138872] 0.3297293375203304
+% (traffic, dln): [0.194423,0.255597,0.73907] 0.217658817732126
+% (random, dln): [0.147955,-0.133006,0.0134066] 0.423664340534555
+
+% normalized information:
+% (facebook, d): [-0.55] 0.471840848722235
+% (traffic, d): [-0.6] 0.21650355502500723
+% (random, d): [-0.1] 0.44100544039781314
+% (facebook, i): [-0.35] 0.18307828314919564
+% (traffic, i): [0.35] 0.21951807775693943
+% (random, i): [-0.2] 0.43784038404490977
+% (facebook, l): [2.3] 0.38007060763692424
+% (traffic, l): [-0.25] 0.21509237602182799
+% (random, l): [0.05] 0.44265720078375076
+% (facebook, n): [0.2] 0.4689802470340089
+% (traffic, n): [-0.25] 0.21884265918897558
+% (random, n): [-0.4] 0.44351458013359263
+% (facebook, dl): [-0.676532,1.5025] 0.4023356042400362
+% (traffic, dl): [0.233561,-0.0764628] 0.2179749210675988
+% (random, dl): [-0.00159558,-0.0980889] 0.4421562417761069
+% (facebook, dln): [-0.0484588,1.15782,-0.069973] 0.406014520990275
+% (traffic, dln): [0.0800902,0.150924,0.0781754] 0.21748833595083378
+% (random, dln): [0.506437,0.120634,0.286868] 0.4413333259116106
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Discussion}
-\begin{frame}
-  
+\begin{frame}{Observations}
+  \begin{itemize}
+  \item It works, basically, although the impact is not great
+  \item The parametrization seems can be very dependent on the network, and not transferable in
+    general (weights are not very consistent between graph types)
+  \item Using the local clustering coefficient does not seem to gain anything
+  \item I also tried inverse degree, 3-neighbourhood, but they don't work better
+  \item Interestingly, normalizing the information by maximum degree makes things worse
+  \end{itemize}
 \end{frame}
 
 
