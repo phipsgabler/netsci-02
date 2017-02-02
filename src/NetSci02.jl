@@ -247,13 +247,24 @@ function fixtest(name::String, test_graph::Graph, trained_param::AbstractArray{F
         @eval $s = $v
     end
 
+    baseline_dist = uninformed_probabilities(test_graph)
     optimized_dist = informed_probabilities(test_graph, trained_param, infos)
+
+    baseline_samples = samplepercolations(max_component_size, test_graph,
+                                          baseline_dist, samples, stepsize)
     optimized_samples = samplepercolations(max_component_size, test_graph,
                                            optimized_dist, samples, stepsize)
+
+    baseline_curve = normalizecurves(baseline_samples)
     optimized_curve = normalizecurves(optimized_samples)
 
     range = 0.0:stepsize:1.0
     open(results_file, mode) do f
+        for (x, y, y2) in zip(range,
+                              smoothcurves(baseline_curve, false),
+                              smoothcurves(baseline_curve, true))
+            write(f, "$name $variant baseline $x $y $y2\n")
+        end
         for (x, y, y2) in zip(range,
                           smoothcurves(optimized_curve, false),
                           smoothcurves(optimized_curve, true))
@@ -314,53 +325,29 @@ function main()
     #     end
     # end
 
-    p1 = [("facebook", fb2, "d") => [0.5],
-          ("traffic", philadelphia, "d") => [0.65],
-          ("random", random2, "d") => [0.25],
-          ("facebook", fb2, "i") => [-1.1],
-          ("traffic", philadelphia, "i") => [0.25],
-          ("random", random2, "i") => [0.4],
-          ("facebook", fb2, "l") => [1.1],
-          ("traffic", philadelphia, "l") => [0.2],
-          ("random", random2, "l") => [0.2],
-          ("facebook", fb2, "n") => [0.05],
-          ("traffic", philadelphia, "n") => [0.5],
-          ("random", random2, "n") => [0.05],
-          ("facebook", fb2, "dl") => [0.400757,0.737475],
-          ("traffic", philadelphia, "dl") => [0.188876,-0.214628],
-          ("random", random2, "dl") => [0.301184,-0.765181],
-          ("facebook", fb2, "dln") => [0.185994,-0.475402,0.0138872],
-          ("traffic", philadelphia, "dln") => [0.194423,0.255597,0.73907],
-          ("random", random2, "dln") => [0.147955,-0.133006,0.0134066]]
-    p2 = [("facebook", fb2, "d") => [-0.55],
-          ("traffic", philadelphia, "d") => [-0.6],
-          ("random", random2, "d") => [-0.1],
-          ("facebook", fb2, "i") => [-0.35],
-          ("traffic", philadelphia, "i") => [0.35],
-          ("random", random2, "i") => [-0.2],
-          ("facebook", fb2, "l") => [2.3],
-          ("traffic", philadelphia, "l") => [-0.25],
-          ("random", random2, "l") => [0.05],
-          ("facebook", fb2, "n") => [0.2],
-          ("traffic", philadelphia, "n") => [-0.25],
-          ("random", random2, "n") => [-0.4],
-          ("facebook", fb2, "dl") => [-0.676532,1.5025],
-          ("traffic", philadelphia, "dl") => [0.233561,-0.0764628],
-          ("random", random2, "dl") => [-0.00159558,-0.0980889],
-          ("facebook", fb2, "dln") => [-0.0484588,1.15782,-0.069973],
-          ("traffic", philadelphia, "dln") => [0.0800902,0.150924,0.0781754],
-          ("random", random2, "dln") => [0.506437,0.120634,0.286868]]
+    p1_train = [("facebook", fb1, "d") => [0.5],
+                ("traffic", austin, "d") => [0.65],
+                ("random", random1, "d") => [0.25],
+                ("facebook", fb1, "i") => [-1.1],
+                ("traffic", austin, "i") => [0.25],
+                ("random", random1, "i") => [0.4],
+                ("facebook", fb1, "l") => [1.1],
+                ("traffic", austin, "l") => [0.2],
+                ("random", random1, "l") => [0.2],
+                ("facebook", fb1, "n") => [0.05],
+                ("traffic", austin, "n") => [0.5],
+                ("random", random1, "n") => [0.05],
+                ("facebook", fb1, "dl") => [0.400757,0.737475],
+                ("traffic", austin, "dl") => [0.188876,-0.214628],
+                ("random", random1, "dl") => [0.301184,-0.765181],
+                ("facebook", fb1, "dln") => [0.185994,-0.475402,0.0138872],
+                ("traffic", austin, "dln") => [0.194423,0.255597,0.73907],
+                ("random", random1, "dln") => [0.147955,-0.133006,0.0134066]]
 
-    for ((name, graph, variant), params) in p1
+    for ((name, graph, variant), params) in p1_train
         fixtest(name, graph, params,
-                "../evaluation/results1.txt", variant;
+                "../evaluation/training1.txt", variant;
                 mode = "a", infos = info_variants[variant], training_parameters...)
-    end
-    
-    for ((name, graph, variant), params) in p2
-        fixtest(name, graph, params,
-                "../evaluation/results2.txt", variant;
-                mode = "a", infos = info_variants_n[variant], training_parameters...)
     end
     
 end
