@@ -2,7 +2,7 @@
 
 \documentclass{beamer}
 \usepackage{tgheros}
-\usepackage[varqu, scaled]{inconsolata}
+\usepackage[varqu, scaled=1.1]{inconsolata}
 %\usepackage{mylistings}
 \usepackage{csquotes}
 \usepackage{hyperref}
@@ -54,15 +54,34 @@
 \beamertemplatenavigationsymbolsempty
 
 \section{Motivation}
-\begin{frame}
-
+\begin{frame}{Fast percolation}
+  \begin{block}{Reminder}
+    Percolation is the study of the global connection behaviour of a network when removin a certain
+    fraction of its nodes, measured in the (relative) size of the larges connected component.
+  \end{block}
+  
+  \begin{itemize}
+  \item Goal: learn a way of informed percolation which optimally disconnects a network (remove
+    minimum amount of nodes with maximum effect)
+  \item Useful for preventing desease spreading, or to find critical nodes in the network
+  \end{itemize}
 \end{frame}
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Methodology}
-\begin{frame}
+\begin{frame}{Setting up a model}
+We attach to each node a Bernoulli random variable of failure:
+\begin{align*}
+  \hat{\mathbf{p}}_i &= \sigma(\mathbf{w}^T \cdot \mathbf{info}_i) \\
+  \mathbf{Fail}_i(\varphi) &\sim \text{Bernoulli}\left(\hat{\mathbf{p}}_i\,
+                      \frac{\varphi}{\frac{1}{n}\sum_i \hat{\mathbf{p}}_i}\right)
+\end{align*}
+where \(\sigma\) is the logistic function, \(\mathbf{info}\) is a vector of local information (eg.,
+degree), and \(\mathbf{w}\) the weighting of this information (a logistic model, sort of).
 
+The value \(\varphi\) varies in \([0; 1]\) and describes the fraction of failing nodes.  The
+individual probabilities are scaled accordingly.
 \end{frame}
 
 
@@ -70,7 +89,26 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Experimental Setup}
 \begin{frame}
-  
+  \begin{itemize}
+  \item Minimize the area under the percolation curve with respect to the weights \(\mathbf{w}\)
+  \item This involves sampling the curves (several times) at each parameter evaluation
+  \item This is expensive, so I used simulated annealing~-- it requires the least amount of
+    evaluations of the loss function
+  \item Compare some different network types:
+  \end{itemize}
+
+  \begin{center}
+    \begin{tabular}{lrrrrrr}
+      \toprule
+      & \multicolumn{2}{c}{Facebook} & \multicolumn{2}{c}{Traffic} & \multicolumn{2}{c}{Random} \\
+      & Train & Test & Train & Test & Train & Test \\
+      \midrule
+      Vertices & 572 & 347 & 7388 & 13389 & 2000 & 2000\\
+      Edges & 3192 & 2519 & 10591 & 21246 & 5000 & 5000\\
+      Density & 0.0195 & 0.0419 & 0.0004 & 0.0002 & \multicolumn{2}{c}{\(\approx\) 0.0025}\\
+      \bottomrule
+    \end{tabular}
+  \end{center}
 \end{frame}
 
 
@@ -78,6 +116,28 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Results}
 \begin{frame}
+
+  % (facebook, d): [0.5] 0.3283630364889754
+  % (traffic, d): [0.65] 0.21074304493798848
+  % (random, d): [0.25] 0.4201843461802456
+  % (facebook, i): [-1.1] 0.1810805834740875
+  % (traffic, i): [0.25] 0.2216547318219854
+  % (random, i): [0.4] 0.4517175677606427
+  % (facebook, l): [1.1] 0.4122167795684476
+  % (traffic, l): [0.2] 0.21651320595420895
+  % (random, l): [0.2] 0.4409616979378643
+  % (facebook, n): [0.05] 0.3342488376071866
+  % (traffic, n): [0.5] 0.21555049861067138
+  % (random, n): [0.05] 0.42808389546611614
+  % (facebook, dl): [0.400757,0.737475] 0.3283141710201117
+  % (traffic, dl): [0.188876,-0.214628] 0.21135127079299312
+  % (random, dl): [0.301184,-0.765181] 0.4183382696586946
+  % (facebook, dln): [0.185994,-0.475402,0.0138872] 0.3297293375203304
+  % (traffic, dln): [0.194423,0.255597,0.73907] 0.217658817732126
+  % (random, dln): [0.147955,-0.133006,0.0134066] 0.423664340534555
+
+
+
   
 \end{frame}
 
